@@ -36,7 +36,8 @@ private:
 
 public:
     // 构造函数
-    CloudFileSystem();
+    CloudFileSystem(std::string config_path);
+
     // 析构函数
     ~CloudFileSystem();
 

@@ -6,10 +6,10 @@
 using json = nlohmann::json;
 
 // 构造函数：初始化并创建client对象
-CloudFileSystem::CloudFileSystem()
+CloudFileSystem::CloudFileSystem(std::string config_path)
 {
     // 读取配置文件
-    std::ifstream f("./configuration.json");
+    std::ifstream f(config_path);
     json config = json::parse(f);
     // 初始化sdk配置参数
     config_history_path = config["history_path"];
