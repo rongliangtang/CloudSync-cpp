@@ -1,0 +1,10 @@
+{
+    "history_path": "/Users/liang/Desktop/CloudSync/ali.history",
+    "local_path": "/Users/liang/Desktop/CloudSync/data/",
+    "cloud_path": "cloudsync/",
+    "access_key_id": "",
+    "key_secret": "",
+    "endpoint": "https://oss-cn-shenzhen.aliyuncs.com",
+    "bucket_name": "cloudsync-test"
+}
+
