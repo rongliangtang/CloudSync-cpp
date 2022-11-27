@@ -80,11 +80,41 @@ std::string CalSHA256_ByMem(const CryptoPP::byte *data, size_t length);
 // 取出路径中的文件名（目录名）
 // 情况1:a/b.txt    结果：b.txt
 // 情况2:a/c/       结果：c/
-std::string GetFileName(std::string path);
+inline std::string GetFileName(std::string path) noexcept
+{
+	std::string result;
+	// 如果是目录的话，先去掉最后面的/
+	if (path[path.size() - 1] == '/')
+	{
+		path.pop_back();
+		int pos = path.find_last_of('/');
+		result = path.substr(pos + 1, path.size());
+		result.push_back('/');
+	}
+	// 如果是文件
+	else
+	{
+		int pos = path.find_last_of('/');
+		result = path.substr(pos + 1, path.size());
+	}
+
+	return result;
+}
 
 // unix下的获取当前时间方法（logger用）
-void get_current_time(timespec& current_time);
+inline void get_current_time(timespec& current_time)  noexcept
+{
+	clock_gettime(CLOCK_REALTIME, &current_time);
+}
 
-void get_current_time_in_tm(struct tm* tm, int* nanoseconds);
+inline void get_current_time_in_tm(struct tm* tm, int* nanoseconds)  noexcept
+{
+	timespec now;
+	get_current_time(now);
+	if (tm)
+		gmtime_r(&now.tv_sec, tm);
+	if (nanoseconds)
+		*nanoseconds = static_cast<int>(now.tv_nsec);
+}
 
 

@@ -53,35 +53,35 @@ public:
     virtual ~StateBase() {}
     explicit StateBase(FileType type, std::string name, std::string time, std::string id) : file_type(type), filename(name), mtime(time), file_id(id) {}
 
-    void setFiletype(FileType type)
+    void setFiletype(FileType type) noexcept
     {
         file_type = type;
     }
-    FileType getFiletype()
+    FileType getFiletype() noexcept
     {
         return file_type;
     }
-    void setFilename(std::string name)
+    void setFilename(std::string name) noexcept
     {
         filename = name;
     }
-    std::string getFilename()
+    std::string getFilename() noexcept
     {
         return filename;
     }
-    void setMtime(std::string time)
+    void setMtime(std::string time) noexcept
     {
         mtime = time;
     }
-    std::string getMtime()
+    std::string getMtime() noexcept
     {
         return mtime;
     }
-    void setFileid(std::string id)
+    void setFileid(std::string id) noexcept
     {
         file_id = id;
     }
-    std::string getFileid()
+    std::string getFileid() noexcept
     {
         return file_id;
     }
@@ -138,17 +138,17 @@ public:
     //     children = ch;
     // }
     // 获取所有孩子节点
-    vector getChildren()
+    vector getChildren() noexcept
     {
         return children;
     }
     // 在children中添加一条记录
-    void insert(std::shared_ptr<StateBase> st)
+    void insert(std::shared_ptr<StateBase> st) noexcept
     {
         children.push_back(st);
     }
     // 将文件名为filename的记录从children中删掉
-    void remove(std::string name)
+    void remove(std::string name) noexcept
     {
         for (unsigned int i = 0; i < children.size(); i++)
         {
@@ -159,7 +159,7 @@ public:
         }
     }
     // 根据goal（filename, file_id）从children找出对应的对象，返回指针，找不到返回空指针
-    std::shared_ptr<StateBase> findState(std::string goal)
+    std::shared_ptr<StateBase> findState(std::string goal) noexcept
     {
         for (unsigned int i = 0; i < children.size(); i++)
         {

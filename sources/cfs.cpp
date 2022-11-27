@@ -63,12 +63,12 @@ void CloudFileSystem::upload(const std::string &local_path, const std::string &c
 
     auto outcome = client->PutObject(request);
 
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "PutObject fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
+    // if (!outcome.isSuccess())
+    // {
+    //     /* 异常处理。*/
+    //     std::cout << "PutObject fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    // }
 }
 
 // 下载云端文件到本地
@@ -80,13 +80,13 @@ void CloudFileSystem::download(const std::string &cloud_path, const std::string 
 
     auto outcome = client->GetObject(request);
 
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "[upload]"
-                  << "GetObjectToFile fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
+    // if (!outcome.isSuccess())
+    // {
+    //     /* 异常处理。*/
+    //     std::cout << "[upload]"
+    //               << "GetObjectToFile fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    // }
 }
 
 // 删除云端文件（空目录的话删除.directory_tag文件就行）
@@ -95,13 +95,13 @@ void CloudFileSystem::remove(const std::string &cloud_path)
     DeleteObjectRequest request(bucket_name, cloud_path);
     auto outcome = client->DeleteObject(request);
 
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "[remove]"
-                  << "DeleteObject fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
+    // if (!outcome.isSuccess())
+    // {
+    //     /* 异常处理。*/
+    //     std::cout << "[remove]"
+    //               << "DeleteObject fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    // }
 }
 
 // 更新云端文件（hash和mtime在下一次封装判断）
@@ -131,13 +131,13 @@ void CloudFileSystem::update(const std::string local_path, const std::string clo
 
     auto outcome = client->PutObject(request);
 
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "[update]"
-                  << "PutObject fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
+    // if (!outcome.isSuccess())
+    // {
+    //     /* 异常处理。*/
+    //     std::cout << "[update]"
+    //               << "PutObject fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    // }
 }
 
 // 对云端文件进行重命名（处理目录需要用到递归）
@@ -165,13 +165,13 @@ void CloudFileSystem::rename(std::string old_cloud_path, std::string new_cloud_p
 
             auto outcome = client->CopyObject(request);
 
-            if (!outcome.isSuccess())
-            {
-                /* 异常处理。*/
-                std::cout << "[rename1]"
-                          << "CopyObject fail"
-                          << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-            }
+            // if (!outcome.isSuccess())
+            // {
+            //     /* 异常处理。*/
+            //     std::cout << "[rename1]"
+            //               << "CopyObject fail"
+            //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+            // }
         }
     }
     // 如果是文件，直接处理就可以
@@ -183,13 +183,13 @@ void CloudFileSystem::rename(std::string old_cloud_path, std::string new_cloud_p
         /* 重命名（拷贝文件）*/
         auto outcome = client->CopyObject(request);
 
-        if (!outcome.isSuccess())
-        {
-            /* 异常处理。*/
-            std::cout << "[rename2]"
-                      << "CopyObject fail"
-                      << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-        }
+        // if (!outcome.isSuccess())
+        // {
+        //     /* 异常处理。*/
+        //     std::cout << "[rename2]"
+        //               << "CopyObject fail"
+        //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+        // }
     }
 
     // 当递归至外层空目录的时候，跳过删除和修改mtime属性，因为c++sdk删除文件到目录为空后，目录会自动删除
@@ -199,13 +199,13 @@ void CloudFileSystem::rename(std::string old_cloud_path, std::string new_cloud_p
         /* 删除旧文件。*/
         auto outcome = client->DeleteObject(request);
 
-        if (!outcome.isSuccess())
-        {
-            /* 异常处理。*/
-            std::cout << "[rename3]"
-                      << "DeleteObject fail"
-                      << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-        }
+        // if (!outcome.isSuccess())
+        // {
+        //     /* 异常处理。*/
+        //     std::cout << "[rename3]"
+        //               << "DeleteObject fail"
+        //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+        // }
 
         // 设置新文件的mtime最近修改时间
         time_t curtime = time(NULL);
@@ -225,13 +225,13 @@ void CloudFileSystem::copy(const std::string &src_path, const std::string &dist_
     /* 拷贝文件。*/
     auto outcome = client->CopyObject(request);
 
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "[copy]"
-                  << "CopyObject fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
+    // if (!outcome.isSuccess())
+    // {
+    //     /* 异常处理。*/
+    //     std::cout << "[copy]"
+    //               << "CopyObject fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    // }
 
     // 设置新文件的mtime最近修改时间
     time_t curtime = time(NULL);
@@ -260,23 +260,12 @@ void CloudFileSystem::create_folder(std::string cloud_path)
     PutObjectRequest request(bucket_name, temp_file_path, content);
 
     auto outcome = client->PutObject(request);
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "[create_folder]"
-                  << "PutObject fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
-
-    // // 删除temp文件
-    // DeleteObjectRequest delrequest(bucket_name, temp_file_path);
-    // auto deloutcome = client->DeleteObject(delrequest);
-
-    // if (!deloutcome.isSuccess())
+    // if (!outcome.isSuccess())
     // {
     //     /* 异常处理。*/
-    //     std::cout << "DeleteObject fail"
-    //               << ",code:" << deloutcome.error().Code() << ",message:" << deloutcome.error().Message() << ",requestId:" << deloutcome.error().RequestId() << std::endl;
+    //     std::cout << "[create_folder]"
+    //               << "PutObject fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
     // }
 }
 
@@ -299,9 +288,9 @@ vector<std::string> CloudFileSystem::list_files(const std::string &cloud_path)
         if (!outcome.isSuccess())
         {
             /* 异常处理。*/
-            std::cout << "[list_files]"
-                      << "ListObjects fail"
-                      << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+            // std::cout << "[list_files]"
+            //           << "ListObjects fail"
+            //           << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
             break;
         }
 
@@ -392,13 +381,13 @@ void CloudFileSystem::set_stat(const std::string &cloud_path, std::map<std::stri
     /* 拷贝文件。*/
     auto outcome = client->CopyObject(request);
 
-    if (!outcome.isSuccess())
-    {
-        /* 异常处理。*/
-        std::cout << "[set_stat]"
-                  << "CopyObject fail"
-                  << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
-    }
+    // if (!outcome.isSuccess())
+    // {
+    //     /* 异常处理。*/
+    //     std::cout << "[set_stat]"
+    //               << "CopyObject fail"
+    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    // }
 }
 
 // 设置云端文件(目录)的hash

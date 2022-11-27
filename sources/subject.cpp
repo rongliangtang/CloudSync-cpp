@@ -1,14 +1,17 @@
 #include "subject.h"
 
-void Subject::Attach(std::shared_ptr<Observer> observer){
+void Subject::Attach(std::shared_ptr<Observer> observer) noexcept
+{
     list_observer.push_back(observer);
 }
 
-void Subject::Detach(std::shared_ptr<Observer> observer){
+void Subject::Detach(std::shared_ptr<Observer> observer) noexcept
+{
     list_observer.remove(observer);
 }
 
-void Subject::Notify(){
+void Subject::Notify() noexcept
+{
     std::list<std::shared_ptr<Observer>>::iterator iterator = list_observer.begin();
     while (iterator != list_observer.end())
     {
@@ -19,4 +22,3 @@ void Subject::Notify(){
         ++iterator;
     }
 }
-
