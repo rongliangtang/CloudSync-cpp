@@ -10,7 +10,7 @@ void Subject::Detach(std::shared_ptr<Observer> observer) noexcept
     list_observer.remove(observer);
 }
 
-void Subject::Notify() noexcept
+void Subject::Notify()
 {
     std::list<std::shared_ptr<Observer>>::iterator iterator = list_observer.begin();
     while (iterator != list_observer.end())

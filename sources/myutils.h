@@ -117,4 +117,8 @@ inline void get_current_time_in_tm(struct tm* tm, int* nanoseconds)  noexcept
 		*nanoseconds = static_cast<int>(now.tv_nsec);
 }
 
+// 实现类似print的功能，返回个string
+std::string vstrprintf(const char* format, va_list args);
+
+std::string strprintf(const char* format, ...);
 

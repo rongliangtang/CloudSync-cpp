@@ -322,16 +322,6 @@ void Synchronize::save_history()
 // 进行一轮同步函数
 void Synchronize::synchronize()
 {
-    // 构建云端当前树
-    INFO_LOG("准备构建云端当前状态树");
-    metatree_cloud = generate_statetree_cloud(config_cloud_path, cfs);
-    INFO_LOG("完成构建云端当前状态树");
-
-    // 执行PULL操作
-    INFO_LOG("准备执行PULL操作");
-    algorithm_pull(metatree_cloud, metatree_cloud_history, config_cloud_path, config_local_path);
-    INFO_LOG("完成执行PULL操作");
-
     // 构建本地当前树
     INFO_LOG("准备构建本地当前状态树");
     metatree_local = generate_statetree_local(config_local_path);
@@ -341,6 +331,16 @@ void Synchronize::synchronize()
     INFO_LOG("准备执行PUSH操作");
     algorithm_push(metatree_local, metatree_local_history, config_local_path, config_cloud_path);
     INFO_LOG("完成执行PUSH操作");
+    
+    // 构建云端当前树
+    INFO_LOG("准备构建云端当前状态树");
+    metatree_cloud = generate_statetree_cloud(config_cloud_path, cfs);
+    INFO_LOG("完成构建云端当前状态树");
+
+    // 执行PULL操作
+    INFO_LOG("准备执行PULL操作");
+    algorithm_pull(metatree_cloud, metatree_cloud_history, config_cloud_path, config_local_path);
+    INFO_LOG("完成执行PULL操作");
 
     // 更新并保存历史树
     metatree_cloud_history = metatree_cloud;

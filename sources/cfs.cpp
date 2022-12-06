@@ -1,8 +1,11 @@
 #include "cfs.h"
 #include "myutils.h"
+#include "exceptions.h"
+
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
 
 // 构造函数：初始化并创建client对象
@@ -63,11 +66,12 @@ void CloudFileSystem::upload(const std::string &local_path, const std::string &c
 
     auto outcome = client->PutObject(request);
 
+     /* 异常处理。*/
     // if (!outcome.isSuccess())
     // {
-    //     /* 异常处理。*/
-    //     std::cout << "PutObject fail"
-    //               << ",code:" << outcome.error().Code() << ",message:" << outcome.error().Message() << ",requestId:" << outcome.error().RequestId() << std::endl;
+    //     // 抛出异常
+    //     std::string tip = "PutObject fail,code:" + outcome.error().Code() + ",message:" + outcome.error().Message() + ",requestId:" + outcome.error().RequestId();
+    //     throw CloudOperationException(__FUNCTION__, __FILE__, __LINE__, std::move(tip));
     // }
 }
 
@@ -242,7 +246,6 @@ void CloudFileSystem::copy(const std::string &src_path, const std::string &dist_
 // 出大问题了！！！不能放入元信息
 // 不要慌，不用加速目录操作的话，目录的hash和mtime都不需要用到
 // 暂时解决办法：创建一个隐藏文件
-// TODO：找腾讯云来试试能不能
 void CloudFileSystem::create_folder(std::string cloud_path)
 {
     // 如果后面不带/，则加上

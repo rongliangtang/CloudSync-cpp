@@ -35,3 +35,34 @@ std::string CalSHA256_ByMem(const CryptoPP::byte *data, size_t length)
 	CryptoPP::StringSource(data, length, true, new CryptoPP::HashFilter(sha256, new CryptoPP::HexEncoder(new CryptoPP::StringSink(value))));
 	return value;
 }
+
+// 实现类似print的功能，返回个string
+std::string vstrprintf(const char* format, va_list args)
+{
+    va_list copied_args;
+    va_copy(copied_args, args);
+    const int MAX_SIZE = 4000;
+    char buffer[MAX_SIZE + 1];
+    // vsnprintf的作用是将参数列表按照format格式填进去，生产一个字符串存到buffer中，返回size为字符串的长度
+    int size = vsnprintf(buffer, sizeof(buffer), format, copied_args);
+    va_end(copied_args);
+    // if (size < 0)
+    //     THROW_POSIX_EXCEPTION(errno, "vsnprintf");
+    if (size <= MAX_SIZE)
+        return std::string(buffer, size);
+    std::string result(static_cast<std::string::size_type>(size), '\0');
+    vsnprintf(&result[0], size + 1, format, args);
+    return result;
+}
+
+std::string strprintf(const char* format, ...)
+{
+    // va_list是预先定义好的一个类型，用来接受函数传入的参数，创建一个object供其他几个函数调用
+    va_list args;
+    // 获取到除第一个后的参数
+    va_start(args, format);
+    // 不理解DEFER的作用，左值转右值，提高内存利用效率？
+    // va_end()的作用是释放指针，将输入的args置为 NULL？？应该不是
+    DEFER(va_end(args));
+    return vstrprintf(format, args);
+}

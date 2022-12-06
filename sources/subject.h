@@ -57,7 +57,7 @@ public:
     // 删除观察者
     void Detach(std::shared_ptr<Observer> observer) noexcept;
     // 通知观察者，观察者会做出反应
-    void Notify() noexcept;
+    void Notify();
     // 改变主体的状态，会通知观察者
     // 带默认值的类内方法，只能在类内定义
     void Set_data(OP task, std::string from_path = "", std::string to_path = "")
