@@ -63,7 +63,7 @@ std::shared_ptr<StateBase> generate_statetree_local(std::string local_path){
             stat(file.c_str(), &buf);
             std::string mtime = std::to_string(buf.st_mtimespec.tv_sec);
             // 计算文件的hash
-            std::string fileid = CalSHA256_ByFile(local_path);
+            std::string fileid = CalSHA256_ByFile(file);
             TRACE_LOG("发现子文件%s，其hash为%s，mtime为%s", file.c_str(), fileid.c_str(), mtime.c_str());
             // 创建子文件FileState对象
             std::shared_ptr<StateBase> child_file = std::make_shared<FileState>(file, mtime, fileid);
