@@ -5,8 +5,72 @@
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <alibabacloud/oss/client/RetryStrategy.h>
 
 using json = nlohmann::json;
+
+#define UNUSED_PARAM(x) ((void)(x))
+// 设置重试策略
+class UserRetryStrategy : public RetryStrategy
+{
+public:
+
+    /* maxRetries表示最大重试次数，scaleFactor为重试等待时间的尺度因子。*/
+    UserRetryStrategy(long maxRetries = 3, long scaleFactor = 300) :
+        m_scaleFactor(scaleFactor), m_maxRetries(maxRetries)  
+    {}
+
+    /* 您可以自定义shouldRetry函数，该函数用于判断是否进行重试。*/
+    bool shouldRetry(const Error & error, long attemptedRetries) const;
+
+    /* 您可以自定义calcDelayTimeMs函数，该函数用于计算重试的延迟等待时间。*/
+    long calcDelayTimeMs(const Error & error, long attemptedRetries) const;
+
+private:
+    long m_scaleFactor;
+    long m_maxRetries;
+};
+
+bool UserRetryStrategy::shouldRetry(const Error & error, long attemptedRetries) const
+{    
+    if (attemptedRetries >= m_maxRetries)
+        return false;
+
+    long responseCode = error.Status();
+
+    // http code
+    if ((responseCode == 403 && error.Message().find("RequestTimeTooSkewed") != std::string::npos) ||
+        (responseCode > 499 && responseCode < 599)) {
+        return true;
+    }
+    else {
+        switch (responseCode)
+        {
+        // curl error code
+        // https://curl.se/libcurl/c/libcurl-errors.html
+        // https://itqq.net/curl-status-code-list-details-2/
+        case (ERROR_CURL_BASE + 6):  //CURLE_COULDNT_RESOLVE_HOST 不能解析主机，当网络断开时，dns解析不到ip
+        case (ERROR_CURL_BASE + 7):  //CURLE_COULDNT_CONNECT
+        case (ERROR_CURL_BASE + 18): //CURLE_PARTIAL_FILE
+        case (ERROR_CURL_BASE + 23): //CURLE_WRITE_ERROR
+        case (ERROR_CURL_BASE + 28): //CURLE_OPERATION_TIMEDOUT
+        case (ERROR_CURL_BASE + 52): //CURLE_GOT_NOTHING
+        case (ERROR_CURL_BASE + 55): //CURLE_SEND_ERROR
+        case (ERROR_CURL_BASE + 56): //CURLE_RECV_ERROR
+            return true;
+        default:
+            break;
+        };
+    }
+
+    return false;
+}
+
+long UserRetryStrategy::calcDelayTimeMs(const Error & error, long attemptedRetries) const
+{
+    UNUSED_PARAM(error);
+    return (1 << attemptedRetries) * m_scaleFactor;
+}
 
 // 构造函数：初始化并创建client对象
 CloudFileSystem::CloudFileSystem(std::string config_path)
@@ -27,6 +91,12 @@ CloudFileSystem::CloudFileSystem(std::string config_path)
     InitializeSdk();
     // 创建操作云的client对象
     ClientConfiguration conf;
+
+    // 设置失败请求重试次数，默认为3次。
+    // 这里设置为99999，尝试当网络中断的时候永远重试
+    auto defaultRetryStrategy = std::make_shared<UserRetryStrategy>(99999);
+    conf.retryStrategy = defaultRetryStrategy;
+
     // client这个shared_ptr指向堆上的OssClient对象，是一个智能指针
     client = std::make_shared<OssClient>(endpoint, access_key_id, key_secret, conf);
 }
