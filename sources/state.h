@@ -7,15 +7,17 @@
 #include <cereal/archives/xml.hpp>
 #include <cereal/types/base_class.hpp>
 #include <fstream>
-#include <cereal/types/vector.hpp>
+#include <cereal/types/list.hpp>
 #include <iostream>
 #include <cereal/types/polymorphic.hpp>
 
 /*
 TODO
+比较list和vector在大量文件时的性能。
+因为将历史树的更新改为实时更新后，插入删除的操作更加频繁（构建当前树+更新历史树），所以文件状态对象改为list容器存放。
+
 children是否需要改为list类型，因为vector为连续存储，当文件特别多，对象占用空间很大时怕没有连续空间放vector。
 list和vector性能简单比较：https://blog.csdn.net/xxm524/article/details/86561828
-这是个小型项目，children占用的内存不会特别大，所以暂时先用小内存中性能的较好vector。
 */
 
 // 枚举文件类型：文件、目录
@@ -124,9 +126,9 @@ private:
 
 private:
     // 存放当前directory的孩子节点
-    std::vector<std::shared_ptr<StateBase>> children;
+    std::list<std::shared_ptr<StateBase>> children;
     // 定义别名
-    typedef std::vector<std::shared_ptr<StateBase>> vector;
+    typedef std::list<std::shared_ptr<StateBase>> list;
 
 public:
     DirectoryState() {}
@@ -138,7 +140,7 @@ public:
     //     children = ch;
     // }
     // 获取所有孩子节点
-    vector getChildren() noexcept
+    list getChildren() noexcept
     {
         return children;
     }
@@ -150,24 +152,25 @@ public:
     // 将文件名为filename的记录从children中删掉
     void remove(std::string name) noexcept
     {
-        for (unsigned int i = 0; i < children.size(); i++)
-        {
-            if (children[i]->getFilename() == name)
-            {
-                children.erase(children.begin() + i);
+        // 声明一个迭代器
+        std::list<std::shared_ptr<StateBase>>::iterator it;
+        for(it = children.begin();it!=children.end();it++){
+            if((*it)->getFilename() == name){
+                children.erase(it);
             }
         }
     }
     // 根据goal（filename, file_id）从children找出对应的对象，返回指针，找不到返回空指针
     std::shared_ptr<StateBase> findState(std::string goal) noexcept
     {
-        for (unsigned int i = 0; i < children.size(); i++)
-        {
-            if (children[i]->getFilename() == goal || children[i]->getFileid() == goal)
-            {
-                return children[i];
+        // 声明一个迭代器
+        std::list<std::shared_ptr<StateBase>>::iterator it;
+        for(it = children.begin();it!=children.end();it++){
+            if((*it)->getFilename() == goal || (*it)->getFileid() == goal){
+                return *it;
             }
         }
+        
         return NULL;
     }
 };

@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
+#include <sys/stat.h>
 
 // 定义在类外（注意不能用多线程，不能多个Synchronize对象同时操作）
 // 判断是否结束程序（按下ctrl+c，保证在一轮同步结束后再结束）
@@ -92,11 +94,12 @@ void Synchronize::initialize()
 }
 
 // push算法
-void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_ptr<StateBase> local_history, std::string local_path, std::string cloud_path)
+void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_ptr<StateBase> local_history, std::string local_path, std::string cloud_path, std::shared_ptr<StateBase> cloud_history)
 {
     // 将StateBase指针转换为DirectoryState指针
     std::shared_ptr<DirectoryState> local_current_tree = std::dynamic_pointer_cast<DirectoryState>(local);
     std::shared_ptr<DirectoryState> local_history_tree = std::dynamic_pointer_cast<DirectoryState>(local_history);
+    std::shared_ptr<DirectoryState> cloud_history_tree = std::dynamic_pointer_cast<DirectoryState>(cloud_history);
 
     TRACE_LOG("准备遍历本地当前元信息树的每一项，判断是否需要进行同步操作");
     // 处理本地新增、修改部分，上传更新到云端
@@ -131,12 +134,24 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
             // 如果child在本地历史树中存在，则递归push
             if (next_local_history)
             {
-                algorithm_push(child, next_local_history, next_local_path, next_cloud_path);
+                std::shared_ptr<StateBase> next_cloud_history = cloud_history_tree->findState(next_cloud_path);
+                
+                algorithm_push(child, next_local_history, next_local_path, next_cloud_path, next_cloud_history);
             }
             // 如果child在本地历史树中不存在，则直接将该目录上传
             else
             {
                 subject->Set_data(CREATE_CLOUD_FOLDER, next_local_path, next_cloud_path);
+                
+                // TODO
+                // 这里应该递归更新历史树，历史树的更新操作跟在最底层的操作方法中，这样效率更高
+                // 这样的话代码需要重构，并且为了效率，需要重新设计代码结构
+                // 目前只插入目录，没有插入目录下文件，会导致push上传后再进行pull下载，虽然用if逻辑阻断了不影响效果，但是多了函数栈的消耗
+
+                // 插入记录到本地历史树和云端历史树
+                TRACE_LOG("插入记录本地历史树%s和云端历史树%s", next_local_path.c_str(), next_cloud_path.c_str());
+                local_history_tree->insert(std::make_shared<DirectoryState>(next_local_path));
+                cloud_history_tree->insert(std::make_shared<DirectoryState>(next_cloud_path));
             }
         }
         // 否则child就是文件
@@ -147,11 +162,39 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
             if (next_local_history && std::stol(child->getMtime()) > std::stol(next_local_history->getMtime()) && child->getFileid() != next_local_history->getFileid())
             {
                 subject->Set_data(UPDATE_CLOUD_FILE, next_local_path, next_cloud_path);
+                
+                // TODO
+                // 把历史树的更新跟最底层的操作写在一起，可以减少不必要操作
+
+                // 更新记录到本地历史树和云端历史树
+                TRACE_LOG("更新记录本地历史树%s和云端历史树%s", next_local_path.c_str(), next_cloud_path.c_str());
+                std::shared_ptr<StateBase> temp_local = local_history_tree->findState(next_local_path);
+                if (temp_local)
+                {
+                    temp_local->setMtime(child->getMtime());
+                    temp_local->setFileid(child->getFileid());
+                }
+                std::shared_ptr<StateBase> temp_cloud = cloud_history_tree->findState(next_cloud_path);
+                if (temp_cloud)
+                {
+                    std::string mtime = cfs->stat_file(next_cloud_path)["mtime"];
+                    temp_cloud->setMtime(mtime);
+                    temp_cloud->setFileid(child->getFileid());
+                }
             }
             // 如果child在本地历史树中不存在，则直接将该文件上传
             if (!next_local_history)
             {
                 subject->Set_data(UPLOAD_FILE, next_local_path, next_cloud_path);
+                
+                // TODO
+                // 把历史树的更新跟最底层的操作写在一起，可以减少不必要操作
+
+                // 插入记录到本地历史树和云端历史树
+                TRACE_LOG("插入记录本地历史树%s和云端历史树%s", next_local_path.c_str(), next_cloud_path.c_str());
+                local_history_tree->insert(std::make_shared<FileState>(next_local_path, child->getMtime(), child->getFileid()));
+                std::string mtime = cfs->stat_file(next_cloud_path)["mtime"];
+                cloud_history_tree->insert(std::make_shared<FileState>(next_cloud_path, mtime, child->getFileid()));
             }
         }
         TRACE_LOG("完成处理当前项%s", filepath.c_str());
@@ -195,6 +238,13 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
             {
                 subject->Set_data(DELETE_CLOUD_FILE, next_cloud_path);
             }
+
+            // 这里直接将目录状态删除而不递归，反而更加高效且正确
+
+            // 删除记录本地历史树和云端历史树
+            TRACE_LOG("删除记录本地历史树%s和云端历史树%s", next_local_path.c_str(), next_cloud_path.c_str());
+            local_history_tree->remove(next_local_path);
+            cloud_history_tree->remove(next_cloud_path);
         }
         TRACE_LOG("完成处理当前项%s", filepath.c_str());
     }
@@ -202,11 +252,12 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
 }
 
 // pull算法
-void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_ptr<StateBase> cloud_history, std::string cloud_path, std::string local_path)
+void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_ptr<StateBase> cloud_history, std::string cloud_path, std::string local_path, std::shared_ptr<StateBase> local_history)
 {
     // 将StateBase指针转换为DirectoryState指针
     std::shared_ptr<DirectoryState> cloud_current_tree = std::dynamic_pointer_cast<DirectoryState>(cloud);
     std::shared_ptr<DirectoryState> cloud_history_tree = std::dynamic_pointer_cast<DirectoryState>(cloud_history);
+    std::shared_ptr<DirectoryState> local_history_tree = std::dynamic_pointer_cast<DirectoryState>(local_history);
 
     TRACE_LOG("准备遍历云端当前元信息树的每一项，判断是否需要进行同步操作");
     // 处理云端新增、修改部分，下载更新到本地
@@ -241,12 +292,24 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
             // 如果child在云端历史树中存在，则递归pull
             if (next_cloud_history)
             {
-                algorithm_pull(child, next_cloud_history, next_cloud_path, next_local_path);
+                std::shared_ptr<StateBase> next_local_history = local_history_tree->findState(next_local_path);
+                
+                algorithm_pull(child, next_cloud_history, next_cloud_path, next_local_path, next_local_history);
             }
             // 如果child在云端历史树中不存在，则直接将该目录下载到本地
             else
             {
                 subject->Set_data(CREATE_LOCAL_FOLDER, next_cloud_path, next_local_path);
+
+                // TODO
+                // 这里应该递归更新历史树，历史树的更新操作跟在最底层的操作方法中，这样效率更高
+                // 这样的话代码需要重构，并且为了效率，需要重新设计代码结构
+                // 目前只插入目录，没有插入目录下文件，会导致pull下载后再进行push上传，虽然用if逻辑阻断了不影响效果，但是多了函数栈的消耗
+
+                // 插入记录到本地历史树和云端历史树
+                TRACE_LOG("插入记录云端历史树%s和本地历史树%s", next_cloud_path.c_str(), next_local_path.c_str());
+                cloud_history_tree->insert(std::make_shared<DirectoryState>(next_cloud_path));
+                local_history_tree->insert(std::make_shared<DirectoryState>(next_local_path));
             }
         }
         // 否则child就是文件
@@ -257,11 +320,43 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
             if (next_cloud_history && std::stol(child->getMtime()) > std::stol(next_cloud_history->getMtime()) && child->getFileid() != next_cloud_history->getFileid())
             {
                 subject->Set_data(UPDATE_LOCAL_FILE, next_cloud_path, next_local_path);
+
+                // TODO
+                // 把历史树的更新跟最底层的操作写在一起，可以减少不必要操作
+
+                // 更新记录到本地历史树和云端历史树
+                TRACE_LOG("更新记录云端历史树%s和本地历史树%s", next_cloud_path.c_str(), next_local_path.c_str());
+                std::shared_ptr<StateBase> temp_cloud = cloud_history_tree->findState(next_cloud_path);
+                if (temp_cloud)
+                {
+                    temp_cloud->setMtime(child->getMtime());
+                    temp_cloud->setFileid(child->getFileid());
+                }
+                std::shared_ptr<StateBase> temp_local = local_history_tree->findState(next_local_path);
+                if (temp_local)
+                {
+                    struct stat buf;
+                    stat(next_local_path.c_str(), &buf);
+                    std::string mtime = std::to_string(buf.st_mtimespec.tv_sec);
+                    temp_local->setMtime(mtime);
+                    temp_local->setFileid(child->getFileid());
+                }
             }
             // 如果child在云端历史树中不存在，则直接将该文件下载
             if (!next_cloud_history)
             {
                 subject->Set_data(DOWNLOAD_FILE, next_cloud_path, next_local_path);
+                
+                // TODO
+                // 把历史树的更新跟最底层的操作写在一起，可以减少不必要操作
+
+                // 插入记录到本地历史树和云端历史树
+                TRACE_LOG("插入记录云端历史树%s和本地历史树%s", next_cloud_path.c_str(), next_local_path.c_str());
+                cloud_history_tree->insert(std::make_shared<FileState>(next_cloud_path, child->getMtime(), child->getFileid()));
+                struct stat buf;
+                stat(next_local_path.c_str(), &buf);
+                std::string mtime = std::to_string(buf.st_mtimespec.tv_sec);
+                local_history_tree->insert(std::make_shared<FileState>(next_local_path, mtime, child->getFileid()));
             }
         }
         TRACE_LOG("完成处理当前项%s", filepath.c_str());
@@ -302,6 +397,13 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
             {
                 subject->Set_data(DELETE_LOCAL_FILE, next_local_path);
             }
+
+            // 这里直接将目录状态删除而不递归，反而更加高效且正确
+
+            // 删除记录本地历史树和云端历史树
+            TRACE_LOG("删除记录云端历史树%s和本地历史树%s", next_cloud_path.c_str(), next_local_path.c_str());
+            cloud_history_tree->remove(next_cloud_path);
+            local_history_tree->remove(next_local_path);
         }
         TRACE_LOG("完成处理当前项%s", filepath.c_str());
     }
@@ -329,7 +431,7 @@ void Synchronize::synchronize()
 
     // 执行PUSH操作
     INFO_LOG("准备执行PUSH操作");
-    algorithm_push(metatree_local, metatree_local_history, config_local_path, config_cloud_path);
+    algorithm_push(metatree_local, metatree_local_history, config_local_path, config_cloud_path, metatree_cloud_history);
     INFO_LOG("完成执行PUSH操作");
     
     // 构建云端当前树
@@ -339,14 +441,11 @@ void Synchronize::synchronize()
 
     // 执行PULL操作
     INFO_LOG("准备执行PULL操作");
-    algorithm_pull(metatree_cloud, metatree_cloud_history, config_cloud_path, config_local_path);
+    algorithm_pull(metatree_cloud, metatree_cloud_history, config_cloud_path, config_local_path, metatree_local_history);
     INFO_LOG("完成执行PULL操作");
 
-    // 更新并保存历史树
-    metatree_cloud_history = metatree_cloud;
-    INFO_LOG("将云端当前状态树赋值给云端历史状态树");
-    metatree_local_history = metatree_local;
-    INFO_LOG("将本地当前状态树赋值给本地历史状态树");
+    // 保存历史树
+    INFO_LOG("完成实时更新历史状态树");
     save_history();
     INFO_LOG("保存历史树到磁盘");
 }

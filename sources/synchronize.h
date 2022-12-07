@@ -34,9 +34,9 @@ public:
     // 初始化云同步系统
     void initialize();
     // push算法
-    void algorithm_push(std::shared_ptr<StateBase> local, std::shared_ptr<StateBase> local_history, std::string local_path, std::string cloud_path);
+    void algorithm_push(std::shared_ptr<StateBase> local, std::shared_ptr<StateBase> local_history, std::string local_path, std::string cloud_path, std::shared_ptr<StateBase> cloud_history);
     // pull算法
-    void algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_ptr<StateBase> cloud_history, std::string cloud_path, std::string local_path);
+    void algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_ptr<StateBase> cloud_history, std::string cloud_path, std::string local_path, std::shared_ptr<StateBase> local_history);
     // 保存本地和云端历史树到磁盘
     void save_history();
     // 进行一轮同步函数
