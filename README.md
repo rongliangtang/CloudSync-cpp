@@ -28,7 +28,7 @@
 ```
 
 ## 程序演示
-演示的场景是两个设备之间的数据同步，分别是host1和host2设备。
+演示的场景是两个设备之间的数据同步，分别是主机1和主机2设备。
 
 [B站视频](https://www.bilibili.com/video/BV1TG4y137Ui/?share_source=copy_web&vd_source=b97f96a8db3aa6ecd014f2ac3840e155)
 
