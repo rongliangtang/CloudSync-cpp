@@ -114,7 +114,7 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
         std::string next_cloud_path = cloud_path + GetFileName(filepath);
         // 在同一目录的历史树中查找child是否也存在
         // 找不到为NULL
-        std::shared_ptr<StateBase> next_local_history = local_history_tree->findState(next_local_path);
+        std::shared_ptr<StateBase> next_local_history = local_history_tree->findState(next_local_path, true, cfs, local_path, cloud_path);
         TRACE_LOG("准备处理当前项%s", filepath.c_str());
         TRACE_LOG("对应本地文件路径为%s", next_local_path.c_str());
         TRACE_LOG("对应云端文件路径为%s", next_cloud_path.c_str());
@@ -134,7 +134,7 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
             // 如果child在本地历史树中存在，则递归push
             if (next_local_history)
             {
-                std::shared_ptr<StateBase> next_cloud_history = cloud_history_tree->findState(next_cloud_path);
+                std::shared_ptr<StateBase> next_cloud_history = cloud_history_tree->findState(next_cloud_path, false, cfs, local_path, cloud_path);
                 
                 algorithm_push(child, next_local_history, next_local_path, next_cloud_path, next_cloud_history);
             }
@@ -168,13 +168,13 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
 
                 // 更新记录到本地历史树和云端历史树
                 TRACE_LOG("更新记录本地历史树%s和云端历史树%s", next_local_path.c_str(), next_cloud_path.c_str());
-                std::shared_ptr<StateBase> temp_local = local_history_tree->findState(next_local_path);
+                std::shared_ptr<StateBase> temp_local = local_history_tree->findState(next_local_path, true, cfs, local_path, cloud_path);
                 if (temp_local)
                 {
                     temp_local->setMtime(child->getMtime());
                     temp_local->setFileid(child->getFileid());
                 }
-                std::shared_ptr<StateBase> temp_cloud = cloud_history_tree->findState(next_cloud_path);
+                std::shared_ptr<StateBase> temp_cloud = cloud_history_tree->findState(next_cloud_path, false, cfs, local_path, cloud_path);
                 if (temp_cloud)
                 {
                     std::string mtime = cfs->stat_file(next_cloud_path)["mtime"];
@@ -219,7 +219,7 @@ void Synchronize::algorithm_push(std::shared_ptr<StateBase> local, std::shared_p
         std::string next_cloud_path = cloud_path + GetFileName(filepath);
         // 在同一目录的历史树中查找child是否也存在
         // 找不到为NULL
-        std::shared_ptr<StateBase> next_local_current = local_current_tree->findState(next_local_path);
+        std::shared_ptr<StateBase> next_local_current = local_current_tree->findState(next_local_path, true, cfs, local_path, cloud_path);
         TRACE_LOG("准备处理当前项%s", filepath.c_str());
         TRACE_LOG("对应本地文件路径为%s", next_local_path.c_str());
         TRACE_LOG("对应云端文件路径为%s", next_cloud_path.c_str());
@@ -272,7 +272,7 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
         std::string next_cloud_path = filepath;
         // 在同一目录的历史树中查找child是否也存在
         // 找不到为NULL
-        std::shared_ptr<StateBase> next_cloud_history = cloud_history_tree->findState(next_cloud_path);
+        std::shared_ptr<StateBase> next_cloud_history = cloud_history_tree->findState(next_cloud_path, false, cfs, local_path, cloud_path);
         TRACE_LOG("准备处理当前项%s", filepath.c_str());
         TRACE_LOG("对应本地文件路径为%s", next_local_path.c_str());
         TRACE_LOG("对应云端文件路径为%s", next_cloud_path.c_str());
@@ -292,7 +292,7 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
             // 如果child在云端历史树中存在，则递归pull
             if (next_cloud_history)
             {
-                std::shared_ptr<StateBase> next_local_history = local_history_tree->findState(next_local_path);
+                std::shared_ptr<StateBase> next_local_history = local_history_tree->findState(next_local_path, true, cfs, local_path, cloud_path);
                 
                 algorithm_pull(child, next_cloud_history, next_cloud_path, next_local_path, next_local_history);
             }
@@ -326,13 +326,13 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
 
                 // 更新记录到本地历史树和云端历史树
                 TRACE_LOG("更新记录云端历史树%s和本地历史树%s", next_cloud_path.c_str(), next_local_path.c_str());
-                std::shared_ptr<StateBase> temp_cloud = cloud_history_tree->findState(next_cloud_path);
+                std::shared_ptr<StateBase> temp_cloud = cloud_history_tree->findState(next_cloud_path, false, cfs, local_path, cloud_path);
                 if (temp_cloud)
                 {
                     temp_cloud->setMtime(child->getMtime());
                     temp_cloud->setFileid(child->getFileid());
                 }
-                std::shared_ptr<StateBase> temp_local = local_history_tree->findState(next_local_path);
+                std::shared_ptr<StateBase> temp_local = local_history_tree->findState(next_local_path, true, cfs, local_path, cloud_path);
                 if (temp_local)
                 {
                     struct stat buf;
@@ -381,7 +381,7 @@ void Synchronize::algorithm_pull(std::shared_ptr<StateBase> cloud, std::shared_p
         std::string next_cloud_path = filepath;
         // 在同一目录的历史树中查找child是否也存在
         // 找不到为NULL
-        std::shared_ptr<StateBase> next_cloud_current = cloud_current_tree->findState(next_cloud_path);
+        std::shared_ptr<StateBase> next_cloud_current = cloud_current_tree->findState(next_cloud_path, false, cfs, local_path, cloud_path);
         if (next_cloud_current)
         {
             TRACE_LOG("云端当前树中存在");

@@ -218,6 +218,12 @@ void CloudFileSystem::update(const std::string local_path, const std::string clo
 // 利用云端copy实现，减少网络资源消耗
 void CloudFileSystem::rename(std::string old_cloud_path, std::string new_cloud_path)
 {
+    // 如果重命名的文件名一样，则直接退出无需重命名
+    if (old_cloud_path == new_cloud_path)
+    {
+        return;
+    }
+    
     // 如果是目录，递归进去处理
     if (old_cloud_path[old_cloud_path.size() - 1] == '/')
     {

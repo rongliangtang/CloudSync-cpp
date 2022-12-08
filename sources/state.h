@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cfs.h"
+#include "myutils.h"
 
 #include <cereal/types/memory.hpp>
 #include <cereal/types/base_class.hpp>
@@ -10,6 +11,7 @@
 #include <cereal/types/list.hpp>
 #include <iostream>
 #include <cereal/types/polymorphic.hpp>
+#include <string.h>
 
 /*
 TODO
@@ -161,12 +163,53 @@ public:
         }
     }
     // 根据goal（filename, file_id）从children找出对应的对象，返回指针，找不到返回空指针
-    std::shared_ptr<StateBase> findState(std::string goal) noexcept
+    // 本地和云端不区分大小写，如果本地发现大小写不一致，则更新云端数据的大小写，保证云端与本地一致
+    std::shared_ptr<StateBase> findState(std::string goal, bool isLocalTree, std::shared_ptr<CloudFileSystem> cfs, std::string local_path, std::string cloud_path) noexcept
     {
         // 声明一个迭代器
         std::list<std::shared_ptr<StateBase>>::iterator it;
-        for(it = children.begin();it!=children.end();it++){
-            if((*it)->getFilename() == goal || (*it)->getFileid() == goal){
+        for(it = children.begin();it!=children.end();it++){            
+            // 忽略大小写，看filename是否相等
+            // strcasecmp函数为linux下不区分大小写的比较函数，在string.h头文件中
+            std::string fileName = (*it)->getFilename();
+            if (strcasecmp(goal.c_str(), fileName.c_str()) == 0)
+            {
+                // 如果比较大小写，不相等的话需要重设找到的状态的filename
+                // 目的是为了保证历史树中的状态的filename及时更新
+                if(fileName != goal){
+                    // 如果是本地的状态树，说明本地出现了大小写不一致的情况，需要同步云端的数据大小写与本地一致
+                    if (isLocalTree)
+                    {
+                        std::string old_cloud_path = cloud_path + GetFileName(fileName);
+                        std::string new_cloud_path = cloud_path + GetFileName(goal);
+                        std::cout << "旧云端路径：" << old_cloud_path << std::endl;
+                        std::cout << "新云端路径：" << new_cloud_path << std::endl;
+                        // TODO
+                        // (*it)->setFilename(goal);
+                        // 重命名状态树中目录后，状态树目录内的文件并未重命名，会递归对这些文件进行重复操作，这里需要优化下
+                        cfs->rename(old_cloud_path, new_cloud_path);
+                    }
+                    else
+                    // 否则就是云端的状态树，说明云端出现了大小写不一致的情况（另一个设备更新大小写引起），需要同步本地的数据大小写与云端一致
+                    {
+                        std::string old_local_path = local_path + GetFileName(fileName);
+                        std::string new_local_path = local_path + GetFileName(goal);
+                        std::cout << "旧本地路径：" << old_local_path << std::endl;
+                        std::cout << "新本地路径：" << new_local_path << std::endl;
+                        // TODO
+                        // (*it)->setFilename(goal);
+                        // 重命名状态树中目录后，状态树目录内的文件并未重命名，会递归对这些文件进行重复操作，这里需要优化下
+                        // host1本地完成更改大小写后，会对host1进行重复无效rename，这里也需要优化
+                        std::filesystem::rename(old_local_path, new_local_path);
+                    }
+
+                    (*it)->setFilename(goal);
+                }
+                return *it;
+            }
+            // 根据hash来找状态
+            if ((*it)->getFileid() == goal)
+            {
                 return *it;
             }
         }
