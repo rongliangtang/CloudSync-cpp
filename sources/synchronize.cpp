@@ -463,8 +463,8 @@ void Synchronize::start()
     {
         // 进行一次同步
         synchronize();
-        // 挂起当前线程29秒
-        sleep(29);
+        // 设置挂起当前线程的时间（同步间隔时间）
+        sleep(5);
     }
     std::cout << "关闭同步" << std::endl;
     INFO_LOG("关闭云同步系统");
